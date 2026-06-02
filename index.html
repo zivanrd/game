@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>My Game Collection</title>
+
+<style>
+body{
+    background:#111;
+    color:white;
+    font-family:Arial,sans-serif;
+    text-align:center;
+    margin:20px;
+}
+
+.game{
+    background:#222;
+    border:2px solid #555;
+    border-radius:10px;
+    padding:20px;
+    margin:30px auto;
+    width:90%;
+    max-width:900px;
+}
+
+img{
+    width:100%;
+    max-width:800px;
+    border-radius:10px;
+}
+
+pre{
+    text-align:left;
+    background:black;
+    color:#00ff00;
+    padding:15px;
+    overflow:auto;
+    max-height:300px;
+}
+
+button{
+    padding:10px 20px;
+    font-size:18px;
+    cursor:pointer;
+    margin-top:10px;
+}
+</style>
+
+<script>
+function toggleCode(id){
+    let code = document.getElementById(id);
+
+    if(code.style.display === "none"){
+        code.style.display = "block";
+    }else{
+        code.style.display = "none";
+    }
+}
+</script>
+
+</head>
+<body>
+
+<h1>🎮 MY GAME COLLECTION 🎮</h1>
+
+<div class="game">
+    <h2>1. Pacman Game</h2>
+    <img src="pacman.png" alt="Pacman">
+
+    <br><br>
+
+    <button onclick="toggleCode('pacman')">
+        Lihat Source Code
+    </button>
+
+    <pre id="pacman" style="display:none;">
+import pygame
+import random
+import math
+import sys
+
+pygame.init()
+
+TILE = 50
+
+maps = [
+[
+"####################",
+"#                  #",
+"# ######  #######  #",
+"# #              # #",
+"# # ###### ##### # #",
+"# # #          # # #",
+"#   #          #   #",
+"# ######  ###### ###",
+"#                  #",
+"# ######  #######  #",
+"#                  #",
+"####################"
+],
+
+[
+"####################",
+"#     #            #",
+"# ### # ####### ## #",
+"# #   #       #    #",
+"# # ##### ### ######",
+"# #     #          #",
+"# ##### ####### ## #",
+"#                # #",
+"# ####### ####### # ",
+"#                  #",
+"#                  #",
+"####################"
+],
+
+[
+"####################",
+"#                  #",
+"# ###### ######### #",
+"# #              # #",
+"# # ###### ##### # #",
+"# # #          # # #",
+"# # ########## # # #",
+"# #            # # #",
+"# ####### ###### # #",
+"#                # #",
+"#                  #",
+"####################"
+]
+]
+
+maze = random.choice(maps)
+
+ROWS = len(maze)
+COLS = len(maze[0])
+
+WIDTH = COLS * TILE
+HEIGHT = ROWS * TILE
+
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Pac-Man")
+
+clock = pygame.time.Clock()
+font = pygame.font.SysFont(None, 40)
+
+BLACK = (0,0,0)
+BLUE = (0,0,255)
+YELLOW = (255,255,0)
+WHITE = (255,255,255)
+RED = (255,0,0)
+GREEN = (0,255,0)
+
+player_size = 40
+player_x = TILE + 5
+player_y = TILE + 5
+player_speed = 5
+
+score = 0
+
+# POINT
+points = []
+
+for row in range(ROWS):
+    for col in range(COLS):
+        if maze[row][col] == " ":
+            points.append(
+                [col*TILE + TILE//2,
+                 row*TILE + TILE//2]
+            )
+
+# MUSUH
+enemies = [
+    [WIDTH-100, HEIGHT-100, RED],
+    [WIDTH-100, 100, GREEN],
+    [100, HEIGHT-100, BLUE]
+]
+
+enemy_speed = 2
+
+def player_collision(x, y):
+
+    corners = [
+        (x, y),
+        (x + player_size, y),
+        (x, y + player_size),
+        (x + player_size, y + player_size)
+    ]
+
+    for px, py in corners:
+
+        col = int(px // TILE)
+        row = int(py // TILE)
+
+        if row < 0 or row >= ROWS:
+            return True
+
+        if col < 0 or col >= COLS:
+            return True
+
+        if maze[row][col] == "#":
+            return True
+
+    return False
+
+
+def enemy_collision(x, y):
+
+    size = 40
+
+    corners = [
+        (x, y),
+        (x + size, y),
+        (x, y + size),
+        (x + size, y + size)
+    ]
+
+    for px, py in corners:
+
+        col = int(px // TILE)
+        row = int(py // TILE)
+
+        if row < 0 or row >= ROWS:
+            return True
+
+        if col < 0 or col >= COLS:
+            return True
+
+        if maze[row][col] == "#":
+            return True
+
+    return False
+
+
+running = True
+
+while running:
+
+    clock.tick(60)
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    dx = 0
+    dy = 0
+
+    keys = pygame.key.get_pressed()
+
+    if keys[pygame.K_w]:
+        dy = -player_speed
+
+    if keys[pygame.K_s]:
+        dy = player_speed
+
+    if keys[pygame.K_a]:
+        dx = -player_speed
+
+    if keys[pygame.K_d]:
+        dx = player_speed
+
+    if not player_collision(player_x + dx, player_y):
+        player_x += dx
+
+    if not player_collision(player_x, player_y + dy):
+        player_y += dy
+
+    # MAKAN POINT
+    center_x = player_x + player_size//2
+    center_y = player_y + player_size//2
+
+    for point in points[:]:
+
+        dist = math.hypot(
+            center_x - point[0],
+            center_y - point[1]
+        )
+
+        if dist < 20:
+            points.remove(point)
+            score += 1
+
+    # MUSUH MENGEJAR
+    for enemy in enemies:
+
+        ex, ey, color = enemy
+
+        move_x = 0
+        move_y = 0
+
+        if player_x > ex:
+            move_x = enemy_speed
+        elif player_x < ex:
+            move_x = -enemy_speed
+
+        if player_y > ey:
+            move_y = enemy_speed
+        elif player_y < ey:
+            move_y = -enemy_speed
+
+        if not enemy_collision(ex + move_x, ey):
+            ex += move_x
+
+        if not enemy_collision(ex, ey + move_y):
+            ey += move_y
+
+        enemy[0] = ex
+        enemy[1] = ey
+
+        player_rect = pygame.Rect(
+            player_x,
+            player_y,
+            player_size,
+            player_size
+        )
+
+        enemy_rect = pygame.Rect(
+            ex,
+            ey,
+            40,
+            40
+        )
+
+        if player_rect.colliderect(enemy_rect):
+            running = False
+
+    screen.fill(BLACK)
+
+    # LABIRIN
+    for row in range(ROWS):
+        for col in range(COLS):
+
+            if maze[row][col] == "#":
+                pygame.draw.rect(
+                    screen,
+                    BLUE,
+                    (
+                        col*TILE,
+                        row*TILE,
+                        TILE,
+                        TILE
+                    )
+                )
+
+    # POINT
+    for point in points:
+        pygame.draw.circle(
+            screen,
+            WHITE,
+            point,
+            5
+        )
+
+    # PACMAN
+    pygame.draw.circle(
+        screen,
+        YELLOW,
+        (
+            player_x + player_size//2,
+            player_y + player_size//2
+        ),
+        player_size//2
+    )
+
+    # MUSUH
+    for ex, ey, color in enemies:
+        pygame.draw.rect(
+            screen,
+            color,
+            (ex, ey, 40, 40)
+        )
+
+    score_text = font.render(
+        f"Score: {score}",
+        True,
+        WHITE
+    )
+
+    screen.blit(score_text, (10, 10))
+
+    if len(points) == 0:
+        win_text = font.render(
+            "YOU WIN!",
+            True,
+            WHITE
+        )
+        screen.blit(
+            win_text,
+            (WIDTH//2-80, HEIGHT//2)
+        )
+
+    pygame.display.flip()
+
+pygame.quit()
+sys.exit()
+    </pre>
+</div>
+
+<div class="game">
+    <h2>2. Snake Bugler</h2>
+    <img src="snake.png" alt="Snake">
+
+    <br><br>
+
+    <button onclick="toggleCode('snake')">
+        Lihat Source Code
+    </button>
+
+    <pre id="snake" style="display:none;">
+import pygame
+import random
+
+pygame.init()
+
+# =====================
+# WINDOW
+# =====================
+
+WIDTH = 900
+HEIGHT = 700
+
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Endless Snake")
+
+clock = pygame.time.Clock()
+
+# =====================
+# FONT
+# =====================
+
+title_font = pygame.font.SysFont(None, 80)
+font = pygame.font.SysFont(None, 40)
+small_font = pygame.font.SysFont(None, 30)
+
+# =====================
+# COLORS
+# =====================
+
+snake_colors = {
+    "GREEN": (0, 255, 0),
+    "YELLOW": (255, 255, 0),
+    "RED": (255, 0, 0),
+    "PURPLE": (180, 0, 255),
+    "BLUE": (0, 120, 255),
+    "RGB": "RGB"
+}
+
+selected_skin = "GREEN"
+
+# =====================
+# BLOCK SIZE
+# =====================
+
+BLOCK = 20
+
+# =====================
+# PLAYER
+# =====================
+
+snake = [[400, 300]]
+
+snake_length = 5
+
+snake_x = 400
+snake_y = 300
+
+snake_x_change = 0
+snake_y_change = 0
+
+snake_speed = 12
+
+# =====================
+# ENEMIES
+# =====================
+
+enemies = []
+
+enemy_spawn_timer = 0
+
+# =====================
+# FOOD
+# =====================
+
+foods = []
+
+food_spawn_timer = 0
+
+# =====================
+# RGB
+# =====================
+
+rgb_r = 255
+rgb_g = 0
+rgb_b = 0
+
+rgb_mode = 0
+
+# =====================
+# MENU
+# =====================
+
+menu = True
+
+# =====================
+# GAME
+# =====================
+
+score = 0
+
+running = True
+game_over = False
+
+# =====================
+# LOOP
+# =====================
+
+while running:
+
+    # =====================
+    # EVENTS
+    # =====================
+
+    for event in pygame.event.get():
+
+        if event.type == pygame.QUIT:
+            running = False
+
+        # MENU
+        if menu:
+
+            if event.type == pygame.KEYDOWN:
+
+                if event.key == pygame.K_RETURN:
+                    menu = False
+
+                if event.key == pygame.K_1:
+                    selected_skin = "GREEN"
+
+                if event.key == pygame.K_2:
+                    selected_skin = "YELLOW"
+
+                if event.key == pygame.K_3:
+                    selected_skin = "RED"
+
+                if event.key == pygame.K_4:
+                    selected_skin = "PURPLE"
+
+                if event.key == pygame.K_5:
+                    selected_skin = "BLUE"
+
+                if event.key == pygame.K_6:
+                    selected_skin = "RGB"
+
+        else:
+
+            if event.type == pygame.KEYDOWN:
+
+                if event.key == pygame.K_w:
+                    snake_x_change = 0
+                    snake_y_change = -BLOCK
+
+                if event.key == pygame.K_s:
+                    snake_x_change = 0
+                    snake_y_change = BLOCK
+
+                if event.key == pygame.K_a:
+                    snake_x_change = -BLOCK
+                    snake_y_change = 0
+
+                if event.key == pygame.K_d:
+                    snake_x_change = BLOCK
+                    snake_y_change = 0
+
+    # =====================
+    # MENU
+    # =====================
+
+    if menu:
+
+        screen.fill("black")
+
+        title = title_font.render(
+            "ENDLESS SNAKE",
+            True,
+            "white"
+        )
+
+        screen.blit(title, (170, 80))
+
+        start = font.render(
+            "PRESS ENTER TO START",
+            True,
+            "green"
+        )
+
+        screen.blit(start, (240, 180))
+
+        skins = [
+            "1 = GREEN",
+            "2 = YELLOW",
+            "3 = RED",
+            "4 = PURPLE",
+            "5 = BLUE",
+            "6 = RGB"
+        ]
+
+        for i, text in enumerate(skins):
+
+            draw = small_font.render(
+                text,
+                True,
+                "white"
+            )
+
+            screen.blit(draw, (70, 320 + i * 40))
+
+        selected = font.render(
+            f"SELECTED: {selected_skin}",
+            True,
+            "yellow"
+        )
+
+        screen.blit(selected, (470, 340))
+
+        pygame.display.flip()
+        clock.tick(60)
+        continue
+
+    # =====================
+    # GAME
+    # =====================
+
+    if not game_over:
+
+        current_time = pygame.time.get_ticks()
+
+        # =====================
+        # SPAWN FOOD
+        # =====================
+
+        # spawn tiap 1 detik
+        if current_time - food_spawn_timer >= 1000:
+
+            food_x = random.randrange(
+                0,
+                WIDTH - BLOCK,
+                BLOCK
+            )
+
+            food_y = random.randrange(
+                0,
+                HEIGHT - BLOCK,
+                BLOCK
+            )
+
+            foods.append([food_x, food_y])
+
+            food_spawn_timer = current_time
+
+        # =====================
+        # SPAWN ENEMY
+        # =====================
+
+        if current_time - enemy_spawn_timer >= 7000:
+
+            enemy_x = random.randrange(
+                0,
+                WIDTH - BLOCK,
+                BLOCK
+            )
+
+            enemy_y = random.randrange(
+                0,
+                HEIGHT - BLOCK,
+                BLOCK
+            )
+
+            enemy = {
+                "body": [[enemy_x, enemy_y]],
+                "length": 5 + score // 10,
+                "x": enemy_x,
+                "y": enemy_y,
+                "timer": 0,
+                "speed": max(50, 140 - score)
+            }
+
+            enemies.append(enemy)
+
+            enemy_spawn_timer = current_time
+
+        # =====================
+        # PLAYER MOVE
+        # =====================
+
+        snake_x += snake_x_change
+        snake_y += snake_y_change
+
+        # keluar map
+        if (
+            snake_x < 0
+            or snake_x >= WIDTH
+            or snake_y < 0
+            or snake_y >= HEIGHT
+        ):
+            game_over = True
+
+        # =====================
+        # PLAYER BODY
+        # =====================
+
+        new_head = [snake_x, snake_y]
+
+        if snake[-1] != new_head:
+
+            snake.append(new_head)
+
+        if len(snake) > snake_length:
+            del snake[0]
+
+        # =====================
+        # ENEMY MOVE
+        # =====================
+
+        for enemy in enemies:
+
+            if current_time - enemy["timer"] >= enemy["speed"]:
+
+                # enemy ngejar player
+                if enemy["x"] < snake_x:
+                    enemy["x"] += BLOCK
+
+                elif enemy["x"] > snake_x:
+                    enemy["x"] -= BLOCK
+
+                elif enemy["y"] < snake_y:
+                    enemy["y"] += BLOCK
+
+                elif enemy["y"] > snake_y:
+                    enemy["y"] -= BLOCK
+
+                enemy["timer"] = current_time
+
+            enemy_head = [enemy["x"], enemy["y"]]
+
+            if enemy["body"][-1] != enemy_head:
+
+                enemy["body"].append(enemy_head)
+
+            if len(enemy["body"]) > enemy["length"]:
+                del enemy["body"][0]
+
+        # =====================
+        # EAT FOOD
+        # =====================
+
+        for food in foods[:]:
+
+            if snake_x == food[0] and snake_y == food[1]:
+
+                foods.remove(food)
+
+                snake_length += 1
+
+                score += 1
+
+                # player makin cepat
+                if snake_speed < 20:
+                    snake_speed += 0.2
+
+        # =====================
+        # COLLISION
+        # =====================
+
+        player_head = snake[-1]
+
+        # tabrak badan sendiri
+        for block in snake[:-1]:
+
+            if block == player_head:
+                game_over = True
+
+        # kena enemy langsung kalah
+        for enemy in enemies:
+
+            for block in enemy["body"]:
+
+                if player_head == block:
+
+                    game_over = True
+
+        # =====================
+        # RGB COLOR
+        # =====================
+
+        if selected_skin == "RGB":
+
+            if rgb_mode == 0:
+                rgb_g += 5
+
+                if rgb_g >= 255:
+                    rgb_mode = 1
+
+            elif rgb_mode == 1:
+                rgb_r -= 5
+
+                if rgb_r <= 0:
+                    rgb_mode = 2
+
+            elif rgb_mode == 2:
+                rgb_b += 5
+
+                if rgb_b >= 255:
+                    rgb_mode = 3
+
+            elif rgb_mode == 3:
+                rgb_g -= 5
+
+                if rgb_g <= 0:
+                    rgb_mode = 4
+
+            elif rgb_mode == 4:
+                rgb_r += 5
+
+                if rgb_r >= 255:
+                    rgb_mode = 5
+
+            elif rgb_mode == 5:
+                rgb_b -= 5
+
+                if rgb_b <= 0:
+                    rgb_mode = 0
+
+            snake_color = (rgb_r, rgb_g, rgb_b)
+
+        else:
+
+            snake_color = snake_colors[selected_skin]
+
+    # =====================
+    # DRAW
+    # =====================
+
+    screen.fill("black")
+
+    # FOOD
+    for food in foods:
+
+        pygame.draw.rect(
+            screen,
+            "yellow",
+            [food[0], food[1], BLOCK, BLOCK]
+        )
+
+    # PLAYER
+    for block in snake:
+
+        pygame.draw.rect(
+            screen,
+            snake_color,
+            [block[0], block[1], BLOCK, BLOCK]
+        )
+
+    # ENEMIES
+    for enemy in enemies:
+
+        for block in enemy["body"]:
+
+            pygame.draw.rect(
+                screen,
+                "red",
+                [block[0], block[1], BLOCK, BLOCK]
+            )
+
+    # UI
+    score_text = font.render(
+        f"Score: {score}",
+        True,
+        "white"
+    )
+
+    screen.blit(score_text, (10, 10))
+
+    length_text = font.render(
+        f"Length: {snake_length}",
+        True,
+        "white"
+    )
+
+    screen.blit(length_text, (10, 50))
+
+    enemy_text = font.render(
+        f"Enemies: {len(enemies)}",
+        True,
+        "red"
+    )
+
+    screen.blit(enemy_text, (10, 90))
+
+    # GAME OVER
+    if game_over:
+
+        text = title_font.render(
+            "GAME OVER",
+            True,
+            "red"
+        )
+
+        screen.blit(text, (180, 280))
+
+    pygame.display.flip()
+
+    clock.tick(snake_speed)
+
+pygame.quit()
+    </pre>
+</div>
+
+<div class="game">
+    <h2>3. Run Block</h2>
+    <img src="runblock.png" alt="Run Block">
+
+    <br><br>
+
+    <button onclick="toggleCode('runblock')">
+        Lihat Source Code
+    </button>
+
+    <pre id="runblock" style="display:none;">
+import pygame
+import random
+import math
+
+pygame.init()
+
+# =====================
+# WINDOW
+# =====================
+
+WIDTH = 800
+HEIGHT = 600
+
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Block Survival")
+
+clock = pygame.time.Clock()
+
+font = pygame.font.SysFont(None, 80)
+ui_font = pygame.font.SysFont(None, 40)
+
+# =====================
+# PLAYER
+# =====================
+
+player = pygame.Rect(300, 250, 50, 50)
+
+PLAYER_SPEED = 8
+health = 3
+
+# =====================
+# ENEMIES
+# =====================
+
+enemy1 = pygame.Rect(100, 100, 50, 50)   # blue
+enemy2 = pygame.Rect(700, 500, 50, 50)   # green
+enemy3 = pygame.Rect(400, 50, 50, 50)    # purple
+
+enemy_speed = 2
+
+# =====================
+# GREEN ENEMY DIRECTION
+# =====================
+
+green_dx = enemy_speed
+green_dy = enemy_speed
+green_dir_timer = 0
+
+# =====================
+# FRUIT
+# =====================
+
+fruit = pygame.Rect(
+    random.randint(0, WIDTH - 30),
+    random.randint(0, HEIGHT - 30),
+    30,
+    30
+)
+
+# =====================
+# BULLETS
+# =====================
+
+bullets = []
+
+# =====================
+# MINIONS
+# =====================
+
+minions = []
+
+# =====================
+# TIMERS
+# =====================
+
+last_score_time = pygame.time.get_ticks()
+
+teleport_timer = pygame.time.get_ticks()
+shoot_timer = pygame.time.get_ticks()
+spawn_timer = pygame.time.get_ticks()
+speed_timer = pygame.time.get_ticks()
+
+damage_cooldown = 0
+
+# =====================
+# GAME
+# =====================
+
+running = True
+game_over = False
+
+score = 0
+
+while running:
+
+    # =====================
+    # EVENTS
+    # =====================
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    if not game_over:
+
+        current_time = pygame.time.get_ticks()
+
+        # =====================
+        # SCORE
+        # =====================
+
+        if current_time - last_score_time >= 10:
+            score += 1
+            last_score_time = current_time
+
+        # =====================
+        # PLAYER MOVE
+        # =====================
+
+        keys = pygame.key.get_pressed()
+
+        if keys[pygame.K_w]:
+            player.y -= PLAYER_SPEED
+
+        if keys[pygame.K_s]:
+            player.y += PLAYER_SPEED
+
+        if keys[pygame.K_a]:
+            player.x -= PLAYER_SPEED
+
+        if keys[pygame.K_d]:
+            player.x += PLAYER_SPEED
+
+        player.clamp_ip(screen.get_rect())
+
+        # =====================
+        # ENEMY 1 = TELEPORT
+        # =====================
+
+        if enemy1.x < player.x:
+            enemy1.x += enemy_speed
+
+        if enemy1.x > player.x:
+            enemy1.x -= enemy_speed
+
+        if enemy1.y < player.y:
+            enemy1.y += enemy_speed
+
+        if enemy1.y > player.y:
+            enemy1.y -= enemy_speed
+
+        # teleport tiap 20 detik
+        if current_time - teleport_timer >= 20000:
+
+            enemy1.x = player.x + random.randint(-80, 80)
+            enemy1.y = player.y + random.randint(-80, 80)
+
+            teleport_timer = current_time
+
+        # =====================
+        # ENEMY 2 = FREE MOVE
+        # =====================
+
+        # ganti arah tiap 1 detik
+        if current_time - green_dir_timer >= 1000:
+
+            green_dx = random.choice([
+                -enemy_speed,
+                0,
+                enemy_speed
+            ])
+
+            green_dy = random.choice([
+                -enemy_speed,
+                0,
+                enemy_speed
+            ])
+
+            green_dir_timer = current_time
+
+        # gerak
+        enemy2.x += green_dx
+        enemy2.y += green_dy
+
+        enemy2.clamp_ip(screen.get_rect())
+
+        # tembak 10 peluru tiap 35 detik
+        if current_time - shoot_timer >= 35000:
+
+            for i in range(10):
+
+                angle = math.radians(i * 36)
+
+                bullet = {
+                    "x": enemy2.centerx,
+                    "y": enemy2.centery,
+                    "dx": math.cos(angle) * 5,
+                    "dy": math.sin(angle) * 5
+                }
+
+                bullets.append(bullet)
+
+            shoot_timer = current_time
+
+        # =====================
+        # ENEMY 3 = STAFF + MINION
+        # =====================
+
+        if enemy3.x < player.x:
+            enemy3.x += enemy_speed + 1
+
+        if enemy3.x > player.x:
+            enemy3.x -= enemy_speed + 1
+
+        if enemy3.y < player.y:
+            enemy3.y += enemy_speed + 1
+
+        if enemy3.y > player.y:
+            enemy3.y -= enemy_speed + 1
+
+        # spawn 2 minion tiap 30 detik
+        if current_time - spawn_timer >= 30000:
+
+            for i in range(2):
+
+                minion = {
+                    "rect": pygame.Rect(
+                        enemy3.x + random.randint(-40, 40),
+                        enemy3.y + random.randint(-40, 40),
+                        25,
+                        25
+                    ),
+                    "spawn_time": current_time
+                }
+
+                minions.append(minion)
+
+            spawn_timer = current_time
+
+        # =====================
+        # MINION MOVE
+        # =====================
+
+        for minion in minions[:]:
+
+            rect = minion["rect"]
+
+            # hilang setelah 5 detik
+            if current_time - minion["spawn_time"] >= 5000:
+                minions.remove(minion)
+                continue
+
+            if rect.x < player.x:
+                rect.x += 3
+
+            if rect.x > player.x:
+                rect.x -= 3
+
+            if rect.y < player.y:
+                rect.y += 3
+
+            if rect.y > player.y:
+                rect.y -= 3
+
+            # damage
+            if rect.colliderect(player):
+
+                if damage_cooldown == 0:
+                    health -= 1
+                    damage_cooldown = 60
+
+        # =====================
+        # BULLET MOVE
+        # =====================
+
+        for bullet in bullets[:]:
+
+            bullet["x"] += bullet["dx"]
+            bullet["y"] += bullet["dy"]
+
+            bullet_rect = pygame.Rect(
+                bullet["x"],
+                bullet["y"],
+                10,
+                10
+            )
+
+            # kena player
+            if bullet_rect.colliderect(player):
+
+                if damage_cooldown == 0:
+                    health -= 1
+                    damage_cooldown = 60
+
+                bullets.remove(bullet)
+
+            # keluar layar
+            elif (
+                bullet["x"] < 0
+                or bullet["x"] > WIDTH
+                or bullet["y"] < 0
+                or bullet["y"] > HEIGHT
+            ):
+                bullets.remove(bullet)
+
+        # =====================
+        # PLAYER VS ENEMY
+        # =====================
+
+        # BLUE
+        if player.colliderect(enemy1):
+
+            if player.centerx < enemy1.centerx:
+                player.right = enemy1.left
+            else:
+                player.left = enemy1.right
+
+            if damage_cooldown == 0:
+                health -= 1
+                damage_cooldown = 60
+
+        # GREEN
+        if player.colliderect(enemy2):
+
+            if player.centerx < enemy2.centerx:
+                player.right = enemy2.left
+            else:
+                player.left = enemy2.right
+
+            if damage_cooldown == 0:
+                health -= 1
+                damage_cooldown = 60
+
+        # PURPLE
+        if player.colliderect(enemy3):
+
+            if player.centerx < enemy3.centerx:
+                player.right = enemy3.left
+            else:
+                player.left = enemy3.right
+
+            if damage_cooldown == 0:
+                health -= 1
+                damage_cooldown = 60
+
+        # =====================
+        # ENEMY VS ENEMY
+        # =====================
+
+        if enemy1.colliderect(enemy2):
+
+            enemy1.x -= 3
+            enemy2.x += 3
+
+        if enemy1.colliderect(enemy3):
+
+            enemy1.y -= 3
+            enemy3.y += 3
+
+        if enemy2.colliderect(enemy3):
+
+            enemy2.x += 3
+            enemy3.x -= 3
+
+        # =====================
+        # BATAS LAYAR
+        # =====================
+
+        enemy1.clamp_ip(screen.get_rect())
+        enemy2.clamp_ip(screen.get_rect())
+        enemy3.clamp_ip(screen.get_rect())
+
+        # =====================
+        # DAMAGE COOLDOWN
+        # =====================
+
+        if damage_cooldown > 0:
+            damage_cooldown -= 1
+
+        # =====================
+        # FRUIT
+        # =====================
+
+        if player.colliderect(fruit):
+
+            if health < 3:
+                health += 1
+
+            fruit.x = random.randint(0, WIDTH - 30)
+            fruit.y = random.randint(0, HEIGHT - 30)
+
+        # =====================
+        # SPEED UP
+        # =====================
+
+        # makin cepat tiap 30 detik
+        if current_time - speed_timer >= 30000:
+
+            enemy_speed += 1
+
+            speed_timer = current_time
+
+        # =====================
+        # GAME OVER
+        # =====================
+
+        if health <= 0:
+            game_over = True
+
+    # =====================
+    # DRAW
+    # =====================
+
+    screen.fill("black")
+
+    # player
+    pygame.draw.rect(screen, "red", player)
+
+    # enemies
+    pygame.draw.rect(screen, "blue", enemy1)
+    pygame.draw.rect(screen, "green", enemy2)
+    pygame.draw.rect(screen, "purple", enemy3)
+
+    # tongkat enemy ungu
+    pygame.draw.line(
+        screen,
+        "white",
+        (enemy3.centerx, enemy3.centery),
+        (enemy3.centerx + 30, enemy3.centery - 20),
+        5
+    )
+
+    # fruit
+    pygame.draw.rect(screen, "yellow", fruit)
+
+    # bullets
+    for bullet in bullets:
+
+        pygame.draw.circle(
+            screen,
+            "orange",
+            (int(bullet["x"]), int(bullet["y"])),
+            5
+        )
+
+    # minions
+    for minion in minions:
+
+        pygame.draw.rect(
+            screen,
+            "pink",
+            minion["rect"]
+        )
+
+    # UI
+    score_text = ui_font.render(f"Score: {score}", True, "white")
+    screen.blit(score_text, (10, 10))
+
+    hp_text = ui_font.render(f"HP: {health}/3", True, "white")
+    screen.blit(hp_text, (10, 50))
+
+    speed_text = ui_font.render(
+        f"Enemy Speed: {enemy_speed}",
+        True,
+        "white"
+    )
+    screen.blit(speed_text, (10, 90))
+
+    # GAME OVER
+    if game_over:
+
+        text = font.render("GAME OVER", True, "white")
+        screen.blit(text, (180, 250))
+
+    pygame.display.flip()
+
+    clock.tick(60)
+
+pygame.quit()
+    </pre>
+</div>
+
+<hr>
+
+<h3>
+Maaf kalo codingannya masih ada kesalahan,
+kami harap kalian mengerti karena game ini
+masih tahap uji coba / beta.
+</h3>
+
+</body>
+</html>
