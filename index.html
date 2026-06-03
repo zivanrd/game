@@ -1408,6 +1408,241 @@ pygame.quit()
     </pre>
 </div>
 
+<div class="game">
+    <h2>4. Tetris</h2>
+
+    <img src="tetris.png" alt="Tetris">
+
+    <br><br>
+
+    <button onclick="toggleCode('tetris')">
+        Lihat Source Code
+    </button>
+
+    <pre id="tetris" style="display:none;">
+
+import pygame, random, os
+
+pygame.init()
+
+CELL = 30
+COLS, ROWS = 10, 20
+WIDTH, HEIGHT = 600, 640
+BOARD_X, BOARD_Y = 20, 20
+
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Tetris")
+clock = pygame.time.Clock()
+
+HS_FILE = "tetris_highscore.txt"
+
+def load_highscore():
+    try:
+        with open(HS_FILE, "r") as f:
+            return int(f.read())
+    except:
+        return 0
+
+def save_highscore(score):
+    with open(HS_FILE, "w") as f:
+        f.write(str(score))
+
+COLORS = {
+    "I": (0,255,255),
+    "O": (255,255,0),
+    "T": (180,0,255),
+    "S": (0,255,0),
+    "Z": (255,0,0),
+    "J": (0,0,255),
+    "L": (255,140,0),
+}
+
+SHAPES = {
+    "I":[[1,1,1,1]],
+    "O":[[1,1],[1,1]],
+    "T":[[0,1,0],[1,1,1]],
+    "S":[[0,1,1],[1,1,0]],
+    "Z":[[1,1,0],[0,1,1]],
+    "J":[[1,0,0],[1,1,1]],
+    "L":[[0,0,1],[1,1,1]],
+}
+
+board = [[None]*COLS for _ in range(ROWS)]
+
+class Piece:
+    def __init__(self, kind=None):
+        self.kind = kind or random.choice(list(SHAPES.keys()))
+        self.shape = [row[:] for row in SHAPES[self.kind]]
+        self.x = COLS//2 - len(self.shape[0])//2
+        self.y = 0
+
+def rotate(shape):
+    return [list(r) for r in zip(*shape[::-1])]
+
+def collide(piece, dx=0, dy=0, shape=None):
+    shp = shape or piece.shape
+    for y,row in enumerate(shp):
+        for x,val in enumerate(row):
+            if val:
+                nx = piece.x+x+dx
+                ny = piece.y+y+dy
+                if nx < 0 or nx >= COLS or ny >= ROWS:
+                    return True
+                if ny >= 0 and board[ny][nx]:
+                    return True
+    return False
+
+def lock(piece):
+    for y,row in enumerate(piece.shape):
+        for x,val in enumerate(row):
+            if val:
+                board[piece.y+y][piece.x+x] = piece.kind
+
+def clear_lines():
+    lines = 0
+    y = ROWS-1
+    while y >= 0:
+        if all(board[y]):
+            del board[y]
+            board.insert(0,[None]*COLS)
+            lines += 1
+        else:
+            y -= 1
+    return lines
+
+score = 0
+level = 1
+highscore = load_highscore()
+
+current = Piece()
+next_piece = Piece()
+hold_piece = None
+hold_used = False
+
+running = True
+fall_timer = 0
+
+font = pygame.font.SysFont(None, 30)
+
+while running:
+    dt = clock.tick(60)
+    fall_timer += dt
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFT and not collide(current, dx=-1):
+                current.x -= 1
+            elif event.key == pygame.K_RIGHT and not collide(current, dx=1):
+                current.x += 1
+            elif event.key == pygame.K_DOWN and not collide(current, dy=1):
+                current.y += 1
+            elif event.key == pygame.K_UP:
+                r = rotate(current.shape)
+                if not collide(current, shape=r):
+                    current.shape = r
+            elif event.key == pygame.K_SPACE:
+                while not collide(current, dy=1):
+                    current.y += 1
+            elif event.key == pygame.K_c and not hold_used:
+                hold_used = True
+                if hold_piece is None:
+                    hold_piece = current.kind
+                    current = next_piece
+                    next_piece = Piece()
+                else:
+                    temp = current.kind
+                    current = Piece(hold_piece)
+                    hold_piece = temp
+
+    speed = max(50, 1000 // level)
+
+    if fall_timer >= speed:
+        fall_timer = 0
+
+        if not collide(current, dy=1):
+            current.y += 1
+        else:
+            lock(current)
+
+            lines = clear_lines()
+            score += lines
+
+            level = score // 10 + 1
+
+            current = next_piece
+            next_piece = Piece()
+            hold_used = False
+
+            if collide(current):
+                running = False
+
+    if score > highscore:
+        highscore = score
+
+    screen.fill((20,20,20))
+
+    pygame.draw.rect(screen,(80,80,80),
+                     (BOARD_X,BOARD_Y,COLS*CELL,ROWS*CELL),2)
+
+    for y in range(ROWS):
+        for x in range(COLS):
+            if board[y][x]:
+                pygame.draw.rect(
+                    screen,
+                    COLORS[board[y][x]],
+                    (BOARD_X+x*CELL, BOARD_Y+y*CELL, CELL, CELL)
+                )
+
+    ghost_y = current.y
+    while not collide(current, dy=(ghost_y-current.y)+1):
+        ghost_y += 1
+
+    for y,row in enumerate(current.shape):
+        for x,val in enumerate(row):
+            if val:
+                pygame.draw.rect(
+                    screen,
+                    (90,90,90),
+                    (BOARD_X+(current.x+x)*CELL,
+                     BOARD_Y+(ghost_y+y)*CELL,
+                     CELL,CELL),1
+                )
+
+    for y,row in enumerate(current.shape):
+        for x,val in enumerate(row):
+            if val:
+                pygame.draw.rect(
+                    screen,
+                    COLORS[current.kind],
+                    (BOARD_X+(current.x+x)*CELL,
+                     BOARD_Y+(current.y+y)*CELL,
+                     CELL,CELL)
+                )
+
+    screen.blit(font.render(f"Score: {score}",True,(255,255,255)),(360,40))
+    screen.blit(font.render(f"Level: {level}",True,(255,255,255)),(360,80))
+    screen.blit(font.render(f"High: {highscore}",True,(255,255,255)),(360,120))
+
+    screen.blit(font.render("Hold (C)",True,(255,255,255)),(360,320))
+    if hold_piece:
+        shp = SHAPES[hold_piece]
+        for y,row in enumerate(shp):
+            for x,val in enumerate(row):
+                if val:
+                    pygame.draw.rect(screen,COLORS[hold_piece],
+                                     (360+x*20,360+y*20,20,20))
+
+    pygame.display.flip()
+
+save_highscore(highscore)
+pygame.quit()
+
+    </pre>
+</div>
+
 <hr>
 
 <h3>
